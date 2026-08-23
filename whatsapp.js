@@ -73,7 +73,7 @@ async function initWhatsApp() {
 
   try {
     const { state, saveCreds } = await useMultiFileAuthState(authDir);
-    const { version } = await fetchLatestBaileysVersion().catch(() => ({ version: [2, 3000, 1015901307] }));
+    const version = [2, 3000, 1015901307];
 
     connectionStatus = 'connecting';
     notifyListeners({ status: connectionStatus, qr: null });
