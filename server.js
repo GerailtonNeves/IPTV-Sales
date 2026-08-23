@@ -33,6 +33,16 @@ app.use(express.json({ limit: '15mb' }));
 app.use(express.urlencoded({ limit: '15mb', extended: true }));
 app.use(express.static(path.join(__dirname, 'public')));
 
+// Servir o painel web index.html na rota principal (Garante carregamento no Render/Linux)
+app.get('/', (req, res) => {
+  const indexPath = path.join(__dirname, 'public', 'index.html');
+  if (fs.existsSync(indexPath)) {
+    res.sendFile(indexPath);
+  } else {
+    res.send('<h1>🚀 Sistema IPTV Sales Bot rodando com sucesso!</h1>');
+  }
+});
+
 // Rota de Keep-Alive para hospedagem 24h na nuvem (UptimeRobot / Render)
 app.get('/ping', (req, res) => {
   res.status(200).send({ status: 'ok', timestamp: new Date().toISOString() });
