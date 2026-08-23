@@ -5,7 +5,16 @@ const WebSocket = require('ws');
 const path = require('path');
 const cron = require('node-cron');
 const { dbHelper } = require('./database');
-const whatsappService = require('./services/whatsapp');
+let whatsappService;
+try {
+  whatsappService = require('./whatsapp');
+} catch (e1) {
+  try {
+    whatsappService = require('./services/whatsapp');
+  } catch (e2) {
+    console.error('Erro ao carregar whatsappService:', e2);
+  }
+}
 
 const app = express();
 const server = http.createServer(app);
