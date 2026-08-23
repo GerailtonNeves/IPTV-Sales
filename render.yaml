@@ -3,7 +3,7 @@ services:
     name: iptv-sales-bot
     env: node
     plan: free
-    buildCommand: npm install
+    buildCommand: npm install --no-audit --no-fund
     startCommand: node server.js
     envVars:
       - key: NODE_VERSION
