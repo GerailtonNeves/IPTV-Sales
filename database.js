@@ -93,8 +93,8 @@ db.serialize(() => {
   db.get('SELECT COUNT(*) as count FROM plans', [], (err, row) => {
     if (!err && row && row.count === 0) {
       db.run(`INSERT INTO plans (name, price, description, color) VALUES 
-        ('IPTV Premium 1 Tela', 35.00, 'Todos os canais HD/4K + Filmes e Séries', '#0284c7'),
-        ('IPTV Premium 2 Telas', 70.00, 'Todos os canais HD/4K para 2 aparelhos simultâneos', '#f97316'),
+        ('IPTV CLIENTES 1 Tela', 35.00, 'Todos os canais HD/4K + Filmes e Séries', '#0284c7'),
+        ('IPTV CLIENTES 2 Telas', 70.00, 'Todos os canais HD/4K para 2 aparelhos simultâneos', '#f97316'),
         ('Plano Trimestral 1 Tela', 80.00, 'Acesso por 90 dias com desconto especial', '#10b981'),
         ('Plano Anual 1 Tela', 280.00, 'Acesso por 365 dias com o melhor custo-benefício', '#8b5cf6')`);
     }
@@ -158,7 +158,7 @@ db.serialize(() => {
 
   // Inserir configurações padrão caso não existam
   const defaultSettings = [
-    ['company_name', 'IPTV Premium Digital'],
+    ['company_name', 'IPTV CLIENTES'],
     ['company_phone', '5511999999999'],
     ['pix_key', 'sua-chave-pix-aqui'],
     ['test_duration', '2 horas'],

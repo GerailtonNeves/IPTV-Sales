@@ -1,3 +1,4 @@
+try { require('./fix_libsignal'); } catch(e) {}
 const express = require('express');
 const cors = require('cors');
 const http = require('http');

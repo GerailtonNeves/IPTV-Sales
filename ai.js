@@ -4,7 +4,7 @@ const { dbHelper } = require('../database');
  * Processa a mensagem do cliente usando a API do Gemini ou o Motor de Regras Inteligente Gratuito
  */
 async function generateAiResponse({ userMessage, client, settings }) {
-  const companyName = settings.company_name || 'IPTV Premium';
+  const companyName = settings.company_name || 'IPTV CLIENTES';
   const pixKey = settings.pix_key || 'Chave PIX não cadastrada';
   const systemPrompt = settings.system_prompt || '';
   const apiKey = settings.gemini_api_key || process.env.GEMINI_API_KEY;

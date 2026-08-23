@@ -1,3 +1,4 @@
+try { require('./fix_libsignal'); } catch(e) {}
 const fs = require('fs');
 let baileysPkg = null;
 try {
