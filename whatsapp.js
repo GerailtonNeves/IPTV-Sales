@@ -65,7 +65,7 @@ async function initWhatsApp() {
     return;
   }
 
-  const authDir = path.join(__dirname, '..', 'data', 'baileys_auth');
+  const authDir = path.join(__dirname, 'data', 'baileys_auth');
   if (!fs.existsSync(authDir)) {
     fs.mkdirSync(authDir, { recursive: true });
   }
