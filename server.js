@@ -35,15 +35,21 @@ app.use(express.urlencoded({ limit: '15mb', extended: true }));
 app.use(express.static(path.join(__dirname, 'public'), { index: 'index.html' }));
 app.use('/public', express.static(path.join(__dirname, 'public')));
 
+let fallbackDashboardHtml = '';
+try {
+  fallbackDashboardHtml = require('./dashboard_html');
+} catch (e) {}
+
 // Servir o painel web index.html na rota principal (Garante carregamento completo do HTML no Render)
-app.get('/', (req, res) => {
+app.get(['/', '/index.html'], (req, res) => {
   const indexPath = path.resolve(__dirname, 'public', 'index.html');
-  res.sendFile(indexPath, (err) => {
-    if (err) {
-      console.error('Erro ao servir index.html:', err);
-      res.sendFile(path.resolve('public/index.html'));
-    }
-  });
+  if (fs.existsSync(indexPath)) {
+    return res.sendFile(indexPath);
+  }
+  if (fallbackDashboardHtml) {
+    return res.setHeader('Content-Type', 'text/html; charset=utf-8').send(fallbackDashboardHtml);
+  }
+  res.sendFile(path.resolve('public/index.html'));
 });
 
 // Rota de Keep-Alive para hospedagem 24h na nuvem (UptimeRobot / Render)
