@@ -5,20 +5,7 @@ const WebSocket = require('ws');
 const path = require('path');
 const cron = require('node-cron');
 const { dbHelper } = require('./database');
-let whatsappService;
-try {
-  whatsappService = require('./services/whatsapp');
-} catch (e1) {
-  try {
-    whatsappService = require('./services/WhatsApp');
-  } catch (e2) {
-    try {
-      whatsappService = require('./Services/whatsapp');
-    } catch (e3) {
-      whatsappService = require('./Services/WhatsApp');
-    }
-  }
-}
+const whatsappService = require('./services/whatsapp');
 
 const app = express();
 const server = http.createServer(app);
