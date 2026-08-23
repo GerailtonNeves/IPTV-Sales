@@ -357,7 +357,7 @@ setTimeout(() => {
   whatsappService.initWhatsApp();
 })();
 
-server.listen(PORT, () => {
+server.listen(PORT, '0.0.0.0', () => {
   console.log(`====================================================`);
   console.log(`🚀 Sistema IPTV Sales Bot rodando com sucesso!`);
   console.log(`🌐 Painel Web: http://localhost:${PORT}`);
