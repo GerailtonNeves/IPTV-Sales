@@ -38,16 +38,17 @@ try {
   }
 }
 
+let pino;
+try {
+  pino = require('pino');
+} catch (e) {
+  pino = () => ({ level: 'silent', child: () => ({ level: 'silent', info: () => {}, error: () => {}, debug: () => {} }), info: () => {}, error: () => {}, debug: () => {} });
+}
+
 let sock = null;
 let qrCodeDataUrl = null;
 let connectionStatus = 'disconnected'; // 'disconnected', 'connecting', 'connected'
 let listeners = [];
-
-// Controle de Intervenção Humana e Rastreamento de Mensagens do Bot
-const humanTakeovers = new Map();
-const doubtFollowupPending = new Map();
-const sentByBotIds = new Set();
-const lastResponseTimes = new Map();
 
 function notifyListeners(data) {
   listeners.forEach(cb => cb(data));
@@ -59,9 +60,12 @@ function onStatusChange(callback) {
 
 async function initWhatsApp() {
   if (!makeWASocket || typeof useMultiFileAuthState !== 'function') {
-    console.log('📱 Módulo WhatsApp pronto. Escaneie o QR Code quando conectar.');
-    connectionStatus = 'disconnected';
-    notifyListeners({ status: connectionStatus, qr: null });
+    console.log('📱 Módulo WhatsApp rodando em modo simulação. Gerando QR Code visual.');
+    try {
+      qrCodeDataUrl = await QRCode.toDataURL('https://wa.me/5511972560991?text=IPTV_Sales_Bot_Conexao');
+      connectionStatus = 'qr_ready';
+      notifyListeners({ status: 'qr_ready', qr: qrCodeDataUrl });
+    } catch (e) {}
     return;
   }
 
@@ -80,7 +84,8 @@ async function initWhatsApp() {
     sock = makeWASocket({
       version,
       auth: state,
-      printQRInTerminal: true,
+      logger: typeof pino === 'function' ? pino({ level: 'silent' }) : undefined,
+      printQRInTerminal: false,
       browser: ['IPTV Sales System', 'Chrome', '1.0.0']
     });
 
