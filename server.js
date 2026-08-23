@@ -31,16 +31,19 @@ if (!fs.existsSync(uploadsDir)) {
 app.use(cors());
 app.use(express.json({ limit: '15mb' }));
 app.use(express.urlencoded({ limit: '15mb', extended: true }));
-app.use(express.static(path.join(__dirname, 'public')));
 
-// Servir o painel web index.html na rota principal (Garante carregamento no Render/Linux)
+app.use(express.static(path.join(__dirname, 'public'), { index: 'index.html' }));
+app.use('/public', express.static(path.join(__dirname, 'public')));
+
+// Servir o painel web index.html na rota principal (Garante carregamento completo do HTML no Render)
 app.get('/', (req, res) => {
-  const indexPath = path.join(__dirname, 'public', 'index.html');
-  if (fs.existsSync(indexPath)) {
-    res.sendFile(indexPath);
-  } else {
-    res.send('<h1>🚀 Sistema IPTV Sales Bot rodando com sucesso!</h1>');
-  }
+  const indexPath = path.resolve(__dirname, 'public', 'index.html');
+  res.sendFile(indexPath, (err) => {
+    if (err) {
+      console.error('Erro ao servir index.html:', err);
+      res.sendFile(path.resolve('public/index.html'));
+    }
+  });
 });
 
 // Rota de Keep-Alive para hospedagem 24h na nuvem (UptimeRobot / Render)
