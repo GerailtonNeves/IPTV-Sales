@@ -5,16 +5,7 @@ const WebSocket = require('ws');
 const path = require('path');
 const cron = require('node-cron');
 const { dbHelper } = require('./database');
-let whatsappService;
-try {
-  whatsappService = require('./whatsapp');
-} catch (e1) {
-  try {
-    whatsappService = require('./services/whatsapp');
-  } catch (e2) {
-    console.error('Erro ao carregar whatsappService:', e2);
-  }
-}
+const whatsappService = require('./whatsapp');
 
 const app = express();
 const server = http.createServer(app);
@@ -104,11 +95,16 @@ app.get('/api/whatsapp/status', (req, res) => {
   res.json(whatsappService.getStatus());
 });
 
-// Re-inicializar ou forçar reconexão do WhatsApp
+// Re-inicializar ou forçar reconexão do WhatsApp (Gera novo QR Code limpo)
 app.post('/api/whatsapp/connect', async (req, res) => {
   try {
+    const authDir = path.join(__dirname, 'data', 'baileys_auth');
+    if (fs.existsSync(authDir)) {
+      fs.rmSync(authDir, { recursive: true, force: true });
+      console.log('🧹 Pasta de autenticação limpa para gerar novo QR Code!');
+    }
     whatsappService.initWhatsApp();
-    res.json({ success: true, message: 'Iniciando conexão com WhatsApp...' });
+    res.json({ success: true, message: 'Iniciando geração de novo QR Code...' });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -404,11 +400,9 @@ setTimeout(() => {
   whatsappService.checkExpirationsAndNotify();
 }, 10000);
 
-// Inicializar WhatsApp e Sincronizar dados do Prompt ao rodar o servidor
-(async () => {
-  await dbHelper.syncPromptToDatabase();
-  whatsappService.initWhatsApp();
-})();
+// Inicializar WhatsApp imediatamente e sincronizar dados do banco
+whatsappService.initWhatsApp();
+dbHelper.syncPromptToDatabase().catch(e => console.error('Erro ao sincronizar banco:', e.message));
 
 server.listen(PORT, '0.0.0.0', () => {
   console.log(`====================================================`);

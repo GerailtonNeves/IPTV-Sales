@@ -10,7 +10,7 @@ try {
   }
 }
 
-const makeWASocket = baileysPkg ? (baileysPkg.default || baileysPkg) : null;
+const makeWASocket = baileysPkg ? (baileysPkg.makeWASocket || baileysPkg.default || baileysPkg) : null;
 const useMultiFileAuthState = baileysPkg ? baileysPkg.useMultiFileAuthState : null;
 const DisconnectReason = baileysPkg ? baileysPkg.DisconnectReason : {};
 const fetchLatestBaileysVersion = baileysPkg ? baileysPkg.fetchLatestBaileysVersion : null;
@@ -47,6 +47,7 @@ try {
 
 let sock = null;
 let qrCodeDataUrl = null;
+let lastRawQr = null;
 let connectionStatus = 'disconnected'; // 'disconnected', 'connecting', 'connected'
 let listeners = [];
 
@@ -73,47 +74,62 @@ async function initWhatsApp() {
 
   try {
     const { state, saveCreds } = await useMultiFileAuthState(authDir);
-    const version = [2, 3000, 1015901307];
 
-    connectionStatus = 'connecting';
-    notifyListeners({ status: connectionStatus, qr: null });
+    connectionStatus = qrCodeDataUrl ? 'qr_ready' : 'connecting';
+    notifyListeners({ status: connectionStatus, qr: qrCodeDataUrl });
 
     sock = makeWASocket({
-      version,
       auth: state,
       logger: typeof pino === 'function' ? pino({ level: 'silent' }) : undefined,
       printQRInTerminal: false,
-      browser: ['IPTV Sales System', 'Chrome', '1.0.0']
+      browser: (baileysPkg && baileysPkg.Browsers ? baileysPkg.Browsers.ubuntu('Chrome') : ['Ubuntu', 'Chrome', '22.04.4'])
     });
 
     sock.ev.on('creds.update', saveCreds);
 
-    sock.ev.on('connection.update', async (update) => {
+    sock.ev.on('connection.update', (update) => {
       const { connection, lastDisconnect, qr } = update;
 
       if (qr) {
-        try {
-          qrCodeDataUrl = await QRCode.toDataURL(qr);
+        lastRawQr = qr;
+        connectionStatus = 'qr_ready';
+        QRCode.toDataURL(qr).then(dataUrl => {
+          qrCodeDataUrl = dataUrl;
           connectionStatus = 'qr_ready';
           notifyListeners({ status: 'qr_ready', qr: qrCodeDataUrl });
           console.log('📱 Novo QR Code gerado para o WhatsApp');
-        } catch (err) {
+        }).catch(err => {
           console.error('Erro ao gerar QRCode dataURL:', err.message);
-        }
+        });
       }
 
       if (connection === 'close') {
         const statusCode = lastDisconnect?.error?.output?.statusCode;
-        const shouldReconnect = (statusCode !== DisconnectReason.loggedOut && statusCode !== 401 && statusCode !== 408);
+        const shouldReconnect = (statusCode !== DisconnectReason.loggedOut && statusCode !== 401);
         console.log('Conexão com WhatsApp fechada. Reconectando:', shouldReconnect, 'Code:', statusCode);
-        connectionStatus = 'disconnected';
-        qrCodeDataUrl = null;
-        notifyListeners({ status: connectionStatus, qr: null });
+        
+        if (connectionStatus === 'connected') {
+          if (shouldReconnect) {
+            setTimeout(initWhatsApp, 3000);
+          }
+          return;
+        }
+
+        if (connectionStatus === 'qr_ready' || qrCodeDataUrl || lastRawQr) {
+          connectionStatus = 'qr_ready';
+          if (qrCodeDataUrl) notifyListeners({ status: 'qr_ready', qr: qrCodeDataUrl });
+          return;
+        }
 
         if (shouldReconnect) {
+          connectionStatus = 'connecting';
+          notifyListeners({ status: 'connecting', qr: null });
           setTimeout(initWhatsApp, 3000);
         } else {
-          // Se a sessão expirou ou foi desconectada, limpa a pasta de auth para gerar novo QR Code limpo!
+          connectionStatus = 'disconnected';
+          qrCodeDataUrl = null;
+          lastRawQr = null;
+          notifyListeners({ status: 'disconnected', qr: null });
           console.log('🧹 Limpando sessão antiga do WhatsApp para gerar novo QR Code...');
           try {
             if (fs.existsSync(authDir)) {
@@ -129,7 +145,7 @@ async function initWhatsApp() {
         connectionStatus = 'connected';
         qrCodeDataUrl = null;
         notifyListeners({ status: connectionStatus, qr: null });
-        await dbHelper.updateSetting('whatsapp_status', 'connected');
+        dbHelper.updateSetting('whatsapp_status', 'connected').catch(e => console.error('Erro ao atualizar whatsapp_status no banco:', e.message));
       }
     });
 
