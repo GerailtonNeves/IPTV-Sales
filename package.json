@@ -1,0 +1,33 @@
+{
+  "name": "iptv-sales-bot",
+  "version": "1.0.0",
+  "description": "Sistema Gratuito de Vendas e Atendimento IPTV com WhatsApp, IA, Recibos e Gestão de Clientes",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node --watch server.js"
+  },
+  "keywords": [
+    "iptv",
+    "whatsapp",
+    "bot",
+    "crm",
+    "ai",
+    "gemini",
+    "sales"
+  ],
+  "author": "Antigravity",
+  "license": "MIT",
+  "dependencies": {
+    "@google/generative-ai": "^0.21.0",
+    "@whiskeysockets/baileys": "https://registry.npmjs.org/@whiskeysockets/baileys/-/baileys-6.6.0.tgz",
+    "cors": "^2.8.5",
+    "curve25519-js": "^0.0.4",
+    "dotenv": "^16.4.5",
+    "express": "^4.19.2",
+    "node-cron": "^3.0.3",
+    "qrcode": "^1.5.3",
+    "sqlite3": "^5.1.7",
+    "ws": "^8.17.0"
+  }
+}

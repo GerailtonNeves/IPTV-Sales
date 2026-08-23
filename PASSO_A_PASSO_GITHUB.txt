@@ -1,0 +1,48 @@
+===========================================================
+🚀 GUIA PASSO A PASSO PARA ENVIAR SEU SISTEMA AO GITHUB
+===========================================================
+
+Siga estes passos simples para subir seu projeto para o GitHub e colocá-lo para rodar 24 horas por dia na nuvem gratuitamente:
+
+-----------------------------------------------------------
+OPÇÃO 1: USANDO O GITHUB DESKTOP (RECOMENDADO / MAIS FÁCIL)
+-----------------------------------------------------------
+1. Baixe o "GitHub Desktop" em https://desktop.github.com se ainda não tiver.
+2. Abra o GitHub Desktop e faça login com sua conta do GitHub.
+3. Clique em "File" -> "Add Local Repository..."
+4. Escolha esta pasta que está na sua Área de Trabalho:
+   C:\Users\Gerailton\Desktop\IPTV-Sales-Bot-GitHub
+5. Se aparecer a mensagem "This directory does not appear to be a Git repository", clique no link "Create a repository" e selecione esta pasta.
+6. Escreva a mensagem de commit: "Primeiro envio do IPTV Sales Bot" e clique no botão azul "Commit to main".
+7. Clique no botão "Publish repository" no topo.
+8. Clique em "Publish Repository".
+ Pronto! Seu código estará gravado e seguro no seu GitHub!
+
+-----------------------------------------------------------
+OPÇÃO 2: USANDO O PROMPT DE COMANDO (PROMPT / POWERSHELL)
+-----------------------------------------------------------
+1. Abra o Terminal/PowerShell e acesse a pasta da Área de Trabalho:
+   cd C:\Users\Gerailton\Desktop\IPTV-Sales-Bot-GitHub
+2. Digite os comandos abaixo em ordem:
+   git init
+   git add .
+   git commit -m "Sistema IPTV Sales Bot PWA com IA"
+   git branch -M main
+   git remote add origin https://github.com/SEU_USUARIO/iptv-sales-bot.git
+   git push -u origin main
+
+-----------------------------------------------------------
+☁️ COMO RODAR O SISTEMA 24H NA NUVEM GRÁTIS (RENDER.COM)
+-----------------------------------------------------------
+1. Crie uma conta gratuita em https://render.com
+2. Clique no botão "New +" e escolha "Web Service".
+3. Conecte sua conta do GitHub e selecione o repositório "iptv-sales-bot".
+4. Preencha as configurações:
+   - Name: iptv-sales-bot
+   - Environment: Node
+   - Build Command: npm install
+   - Start Command: node server.js
+5. Clique em "Create Web Service".
+6. Copie a URL do seu site gerada pelo Render (ex: https://iptv-sales-bot.onrender.com).
+7. Para evitar que o Render durma, crie um monitor grátis no https://uptimerobot.com apontando para https://sua-url.onrender.com/ping a cada 5 minutos.
+8. Pronto! Seu sistema e robô do WhatsApp ficarão ligados 24 horas por dia!
