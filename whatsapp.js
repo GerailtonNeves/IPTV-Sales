@@ -60,12 +60,9 @@ function onStatusChange(callback) {
 
 async function initWhatsApp() {
   if (!makeWASocket || typeof useMultiFileAuthState !== 'function') {
-    console.log('📱 Módulo WhatsApp rodando em modo simulação. Gerando QR Code visual.');
-    try {
-      qrCodeDataUrl = await QRCode.toDataURL('https://wa.me/5511972560991?text=IPTV_Sales_Bot_Conexao');
-      connectionStatus = 'qr_ready';
-      notifyListeners({ status: 'qr_ready', qr: qrCodeDataUrl });
-    } catch (e) {}
+    console.log('📱 Módulo WhatsApp rodando em modo simulação.');
+    connectionStatus = 'disconnected';
+    notifyListeners({ status: 'disconnected', qr: null });
     return;
   }
 
