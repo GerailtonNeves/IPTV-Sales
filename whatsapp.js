@@ -111,21 +111,35 @@ async function initWhatsApp() {
         
         if (connectionStatus === 'connected') {
           if (shouldReconnect) {
-            setTimeout(initWhatsApp, 3000);
+            setTimeout(initWhatsApp, 1000);
           }
+          return;
+        }
+
+        // Se o celular leu o QR Code (Code 515 / 500 / Restart Required), reconecta instantaneamente para finalizar o pareamento
+        if (statusCode === 515 || statusCode === 500 || statusCode === DisconnectReason.restartRequired) {
+          console.log('⚡ Celular leu o QR Code! Concluindo pareamento e conectando instantaneamente (Code 515/500)...');
+          connectionStatus = 'connecting';
+          qrCodeDataUrl = null;
+          lastRawQr = null;
+          notifyListeners({ status: 'connecting', qr: null });
+          setTimeout(initWhatsApp, 200);
           return;
         }
 
         if (connectionStatus === 'qr_ready' || qrCodeDataUrl || lastRawQr) {
           connectionStatus = 'qr_ready';
           if (qrCodeDataUrl) notifyListeners({ status: 'qr_ready', qr: qrCodeDataUrl });
+          if (shouldReconnect) {
+            setTimeout(initWhatsApp, 3000);
+          }
           return;
         }
 
         if (shouldReconnect) {
           connectionStatus = 'connecting';
           notifyListeners({ status: 'connecting', qr: null });
-          setTimeout(initWhatsApp, 3000);
+          setTimeout(initWhatsApp, 2000);
         } else {
           connectionStatus = 'disconnected';
           qrCodeDataUrl = null;

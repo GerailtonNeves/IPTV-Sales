@@ -88,7 +88,7 @@ export default { calculateAgreement, calculateSignature, verifySignature, genera
 
   fs.writeFileSync(path.join(srcDir, 'curve.js'), curveJsContent);
 
-  // 3. root index.js com ProtocolAddress, SessionBuilder, SessionCipher, SessionRecord
+  // 3. root index.js com ProtocolAddress, SessionBuilder, SessionCipher, SessionRecord, PreKeyRecord, SignedPreKeyRecord
   const indexJsContent = `
 const crypto = require('crypto');
 const curve25519 = require('curve25519-js');
@@ -126,6 +126,9 @@ class SessionCipher {
   async decryptWhisperMessage(buf) {
     return buf;
   }
+  async decryptPreKeyWhisperMessage(buf) {
+    return buf;
+  }
 }
 
 class SessionRecord {
@@ -138,6 +141,16 @@ class SessionRecord {
   hasSessionState() {
     return true;
   }
+}
+
+class PreKeyRecord {
+  static deserialize(buf) { return new PreKeyRecord(); }
+  serialize() { return Buffer.alloc(0); }
+}
+
+class SignedPreKeyRecord {
+  static deserialize(buf) { return new SignedPreKeyRecord(); }
+  serialize() { return Buffer.alloc(0); }
 }
 
 const Curve = {
@@ -171,6 +184,8 @@ module.exports = {
   SessionBuilder,
   SessionCipher,
   SessionRecord,
+  PreKeyRecord,
+  SignedPreKeyRecord,
   calculateMAC: (key, data) => crypto.createHmac('sha256', key).update(data).digest(),
   verifyMAC: (key, data, mac, length) => crypto.timingSafeEqual(crypto.createHmac('sha256', key).update(data).digest().slice(0, length || 8), mac)
 };
@@ -179,11 +194,10 @@ module.exports = {
   fs.writeFileSync(path.join(targetDir, 'index.js'), indexJsContent);
 }
 
-// Aplicar em todas as pastas libsignal em node_modules
 const mainLibsignal = path.join(__dirname, 'node_modules', 'libsignal');
 const baileysLibsignal = path.join(__dirname, 'node_modules', '@whiskeysockets', 'baileys', 'node_modules', 'libsignal');
 
 applyFixToDir(mainLibsignal);
 applyFixToDir(baileysLibsignal);
 
-console.log('✅ fix_libsignal.js atualizado com ProtocolAddress, SessionBuilder, SessionCipher e SessionRecord!');
+console.log('✅ fix_libsignal.js atualizado com decryptPreKeyWhisperMessage e PreKeyRecord!');
