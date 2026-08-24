@@ -52,6 +52,11 @@ let lastRawQr = null;
 let connectionStatus = 'disconnected'; // 'disconnected', 'connecting', 'connected'
 let listeners = [];
 
+const sentByBotIds = new Set();
+const humanTakeovers = new Map();
+const doubtFollowupPending = new Map();
+const lastResponseTimes = new Map();
+
 function notifyListeners(data) {
   listeners.forEach(cb => cb(data));
 }
@@ -376,12 +381,12 @@ async function initWhatsApp() {
           // Enviar resposta no WhatsApp com proteção contra erros
 
           // Enviar resposta no WhatsApp com proteção contra erros
-          if (botResponse && sock && connectionStatus === 'connected') {
+          if (botResponse && sock) {
             lastResponseTimes.set(cleanPhone, now);
             const sent = await sock.sendMessage(from, { text: botResponse });
             if (sent && sent.key && sent.key.id) sentByBotIds.add(sent.key.id);
             await dbHelper.addBotLog(cleanPhone, senderName, textMessage, botResponse);
-            console.log(`🤖 Resposta enviada para ${cleanPhone}`);
+            console.log(`🤖 Resposta enviada com sucesso para ${cleanPhone}`);
           }
         } catch (msgErr) {
           console.error(`Erro ao processar mensagem no WhatsApp:`, msgErr.message);

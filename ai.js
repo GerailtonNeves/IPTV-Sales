@@ -1,7 +1,17 @@
-const { dbHelper } = require('../database');
+const { GoogleGenerativeAI } = require('@google/generative-ai');
+let dbHelper;
+try {
+  dbHelper = require('./database').dbHelper;
+} catch (e) {
+  try {
+    dbHelper = require('../database').dbHelper;
+  } catch (err) {
+    console.error('Erro ao carregar dbHelper em ai.js:', err);
+  }
+}
 
 /**
- * Processa a mensagem do cliente usando a API do Gemini ou o Motor de Regras Inteligente Gratuito
+ * Processa a mensagem do cliente usando a API do Gemini ou o Motor de Regras Inteligente do Prompt
  */
 async function generateAiResponse({ userMessage, client, settings }) {
   const companyName = settings.company_name || 'IPTV CLIENTES';
@@ -21,7 +31,7 @@ Código do Cliente: ${code}
 Plano Atual: ${client.plan_name}
 Data de Vencimento: ${dueDateFormatted}
 Status do Plano: ${client.status === 'active' ? 'Ativo ✅' : 'Vencido ❌'}
-Valor do Plano: R$ ${parseFloat(client.price).toFixed(2)}
+Valor do Plano: R$ ${parseFloat(client.price || 0).toFixed(2)}
 `;
   } else {
     clientContext = `\n[NÚMERO NÃO CADASTRADO DIRETA OU AUTOMATICAMENTE]\nTrata-se de um novo cliente ou que ainda não se identificou por Nome/Código.`;
@@ -45,7 +55,7 @@ ${clientContext}
 REGRAS DE RESPOSTA OBRIGATÓRIAS:
 1. Sempre cumprimente o cliente pelo NOME ("Olá, [Nome]! 👋") quando o nome for conhecido.
 2. Se o cliente for novo ou seu nome/código não for identificado, cumprimente com simpatia e pergunte o Nome ou Código de Cliente para localizá-lo.
-3. Responda de forma objetiva, simpática e profissional em Português (Brasil) utilizando emojis.
+3. Responda de forma objetiva, simpática e profissional em Português (Brasil) utilizando os dados exatos informados acima.
 
 [MENSAGEM ENVIADA PELO CLIENTE]
 "${userMessage}"
@@ -53,21 +63,24 @@ REGRAS DE RESPOSTA OBRIGATÓRIAS:
 
       const result = await model.generateContent(fullPrompt);
       const response = await result.response;
-      return response.text();
+      const text = response.text();
+      if (text && text.trim().length > 0) {
+        return text;
+      }
     } catch (error) {
       console.error('Erro na API do Gemini:', error.message);
     }
   }
 
-  // Fallback Inteligente Gratuito (Motor de Regras + Contexto + System Prompt Oficial)
-  const msgLower = userMessage.toLowerCase();
+  // Fallback Inteligente baseado no Prompt Mestre Oficial
+  const msgLower = (userMessage || '').toLowerCase();
   const clientGreeting = client ? `Olá, *${client.name}*!` : `Olá!`;
 
   if (msgLower.includes('vencimento') || msgLower.includes('vence') || msgLower.includes('data')) {
     if (client) {
       const dueDateFormatted = client.due_date ? client.due_date.split('-').reverse().join('/') : 'Indefinida';
       const code = client.client_code || `#${1000 + client.id}`;
-      return `Cadastro localizado com sucesso! ✅\n\n*Nome:* ${client.name}\n*Código:* ${code}\n*Plano:* ${client.plan_name}\n*Valor:* R$ ${parseFloat(client.price).toFixed(2)}\n*Vencimento:* ${dueDateFormatted}\n\nDeseja renovar seu plano agora? Posso enviar a chave PIX para pagamento.`;
+      return `Cadastro localizado com sucesso! ✅\n\n*Nome:* ${client.name}\n*Código:* ${code}\n*Plano:* ${client.plan_name}\n*Valor:* R$ ${parseFloat(client.price || 0).toFixed(2)}\n*Vencimento:* ${dueDateFormatted}\n\nDeseja renovar seu plano agora? Posso enviar a chave PIX para pagamento.`;
     } else {
       return `Claro!\n\nPara localizar seu cadastro, por favor informe *seu nome completo* ou o *código do cliente*.`;
     }
@@ -83,11 +96,16 @@ REGRAS DE RESPOSTA OBRIGATÓRIAS:
   }
 
   if (msgLower.includes('plano') || msgLower.includes('preco') || msgLower.includes('preço') || msgLower.includes('valor') || msgLower.includes('tabela')) {
-    return `${clientGreeting} 📺 *Planos IPTV - GN IPTV*\n\n## Plano Premium\n📺 *1 Tela*: R$ 35,00 por mês\n📺 *2 Telas*: R$ 70,00 por mês\n\nTodos os planos incluem:\n✅ Canais Abertos e Fechados (HD/4K)\n✅ Filmes e Séries atualizados\n✅ Esportes e Conteúdo Infantil\n✅ Atualizações Frequentes & Alta Qualidade\n\n🔑 *Chave PIX para Assinatura/Renovação*: \`${pixKey}\`\n\n_Oferecemos um teste gratuito de 3 horas, para que você conheça nosso sistema antes de contratar._`;
+    return `${clientGreeting} 📺 *Planos IPTV - ${companyName}*\n\n## Plano Premium\n📺 *1 Tela*: R$ 35,00 por mês\n📺 *2 Telas*: R$ 70,00 por mês\n\nTodos os planos incluem:\n✅ Canais Abertos e Fechados (HD/4K)\n✅ Filmes e Séries atualizados\n✅ Esportes e Conteúdo Infantil\n✅ Atualizações Frequentes & Alta Qualidade\n\n🔑 *Chave PIX para Assinatura/Renovação*: \`${pixKey}\`\n\n_Oferecemos um teste gratuito de 3 horas, para que você conheça nosso sistema antes de contratar._`;
   }
 
-  // Resposta Padrão baseada no Prompt do Sistema
-  return `${clientGreeting} Seja muito bem-vindo(a) à *GN IPTV*! 👋\n\nComo posso te ajudar hoje?\n\n📺 1️⃣ Conhecer nossos planos\n🎁 2️⃣ Solicitar um teste gratuito\n💳 3️⃣ Renovar meu plano\n📅 4️⃣ Consultar vencimento\n🛠️ 5️⃣ Suporte Técnico & Atendente`;
+  // Se houver Prompt do Sistema personalizado pelo admin, usar como base das respostas
+  if (systemPrompt && systemPrompt.trim().length > 20) {
+    return `${clientGreeting} ${systemPrompt}\n\n*Empresa:* ${companyName}\n🔑 *Chave PIX:* \`${pixKey}\``;
+  }
+
+  // Resposta Padrão de Saudação
+  return `${clientGreeting} Seja muito bem-vindo(a) à *${companyName}*! 👋\n\nComo posso te ajudar hoje?\n\n📺 1️⃣ Conhecer nossos planos\n🎁 2️⃣ Solicitar um teste gratuito\n💳 3️⃣ Renovar meu plano\n📅 4️⃣ Consultar vencimento\n🛠️ 5️⃣ Suporte Técnico & Atendente`;
 }
 
 module.exports = { generateAiResponse };
