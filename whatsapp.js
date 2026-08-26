@@ -327,12 +327,13 @@ async function initWhatsApp() {
           else if (searchResult.ambiguous) {
             botResponse = `Encontrei mais de um cliente cadastrado com esse nome.\n\nPor favor, digite seu *nome completo com sobrenome* ou o seu *código de cliente* (ex: 812600) para eu exibir os dados exatos do seu plano.`;
           }
-          // 3. Opção 1 - Conhecer Nossos Planos (Texto Exato do Prompt)
+          // 3. Opção 1 - Conhecer Nossos Planos (Planos Dinâmicos com Telas e Valores)
           else if (isPlanQuery) {
+            const companyName = settings.company_name || 'IPTV CLIENTES';
             const pixKey = settings.pix_key || '11985897774';
-
-            botResponse = `${clientNameGreeting}\n\n📺 *Planos IPTV - GN IPTV*\n\n## Plano Premium\n📺 *1 Tela*: R$ 35,00 por mês\n\n📺 *2 Telas*: R$ 70,00 por mês\n\nTodos os planos incluem:\n✅ Canais Abertos\n✅ Canais Fechados\n✅ Filmes\n✅ Séries\n✅ Esportes\n✅ Conteúdo Infantil\n✅ Atualizações Frequentes\n✅ Excelente qualidade de imagem\n\n🔑 *Chave PIX*: \`${pixKey}\`\n\n_Oferecemos um teste gratuito de 3 horas, para que você conheça nosso sistema antes de contratar._`;
-
+            const { buildPlansText } = require('./ai');
+            const plansInfo = await buildPlansText(companyName, pixKey);
+            botResponse = `${clientNameGreeting}\n\n${plansInfo}`;
           }
           // 4. Opção 2 - Solicitar Teste Gratuito (Texto Exato do Prompt)
           else if (isTestQuery) {

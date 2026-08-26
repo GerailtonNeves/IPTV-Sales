@@ -77,14 +77,16 @@ db.serialize(() => {
       name TEXT NOT NULL,
       price REAL NOT NULL,
       description TEXT,
-      color TEXT DEFAULT '#0284c7'
+      color TEXT DEFAULT '#0d55bc',
+      screens TEXT DEFAULT '1 Tela'
     )
   `);
 
   // Adicionar colunas de migração se não existirem
   db.run("ALTER TABLE clients ADD COLUMN app_name TEXT DEFAULT ''", () => {});
   db.run("ALTER TABLE clients ADD COLUMN server_name TEXT DEFAULT ''", () => {});
-  db.run("ALTER TABLE plans ADD COLUMN color TEXT DEFAULT '#0284c7'", () => {});
+  db.run("ALTER TABLE plans ADD COLUMN color TEXT DEFAULT '#0d55bc'", () => {});
+  db.run("ALTER TABLE plans ADD COLUMN screens TEXT DEFAULT '1 Tela'", () => {});
 
   // Limpar prefixo 55 dos telefones já cadastrados para manter formato DDD + número (ex: 11985897774)
   db.run("UPDATE clients SET phone = SUBSTR(phone, 3) WHERE (LENGTH(phone) = 12 OR LENGTH(phone) = 13) AND phone LIKE '55%'", () => {});
@@ -92,11 +94,11 @@ db.serialize(() => {
   // Inserir planos padrão se tabela estiver vazia
   db.get('SELECT COUNT(*) as count FROM plans', [], (err, row) => {
     if (!err && row && row.count === 0) {
-      db.run(`INSERT INTO plans (name, price, description, color) VALUES 
-        ('IPTV CLIENTES 1 Tela', 35.00, 'Todos os canais HD/4K + Filmes e Séries', '#0284c7'),
-        ('IPTV CLIENTES 2 Telas', 70.00, 'Todos os canais HD/4K para 2 aparelhos simultâneos', '#f97316'),
-        ('Plano Trimestral 1 Tela', 80.00, 'Acesso por 90 dias com desconto especial', '#10b981'),
-        ('Plano Anual 1 Tela', 280.00, 'Acesso por 365 dias com o melhor custo-benefício', '#8b5cf6')`);
+      db.run(`INSERT INTO plans (name, price, description, color, screens) VALUES 
+        ('Plano Mensal 1 Tela', 35.00, 'Todos os canais HD/4K + Filmes e Séries em alta qualidade', '#0d55bc', '1 Tela'),
+        ('Plano Mensal 2 Telas', 70.00, 'Todos os canais HD/4K para 2 aparelhos simultâneos', '#059669', '2 Telas'),
+        ('Plano Trimestral', 80.00, 'Acesso por 90 dias com desconto especial', '#d97706', '1 Tela'),
+        ('Plano Anual Premium', 280.00, 'Acesso por 365 dias com o melhor custo-benefício', '#7c3aed', '1 Tela')`);
     }
   });
 
@@ -341,37 +343,45 @@ const dbHelper = {
   },
 
   addClient: (clientData) => {
-    const { name, phone, plan_name, price, due_date, notes, app_name, server_name } = clientData;
-    let cleanPhone = phone.replace(/\D/g, '');
+    const { name, phone, plan_name, price, due_date, notes, app_name, server_name } = clientData || {};
+    const rawPhone = String(phone || '');
+    let cleanPhone = rawPhone.replace(/\D/g, '');
     if ((cleanPhone.length === 12 || cleanPhone.length === 13) && cleanPhone.startsWith('55')) {
       cleanPhone = cleanPhone.substring(2);
     }
+    const numPrice = isNaN(parseFloat(price)) ? 35.00 : parseFloat(price);
+    const validDueDate = due_date && due_date.trim() !== '' ? due_date : new Date().toISOString().split('T')[0];
+
     return new Promise((resolve, reject) => {
       db.run(
         `INSERT INTO clients (name, phone, plan_name, price, due_date, notes, app_name, server_name, status, last_renewed_at) 
          VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'active', CURRENT_TIMESTAMP)`,
-        [name, cleanPhone, plan_name || 'Plano IPTV Mensal', price || 30.00, due_date, notes || '', app_name || '', server_name || ''],
+        [name || 'Cliente Sem Nome', cleanPhone, plan_name || 'Plano Mensal', numPrice, validDueDate, notes || '', app_name || '', server_name || ''],
         function (err) {
           if (err) return reject(err);
-          resolve({ id: this.lastID, ...clientData, phone: cleanPhone });
+          resolve({ id: this.lastID, ...clientData, phone: cleanPhone, price: numPrice });
         }
       );
     });
   },
 
   updateClient: (id, clientData) => {
-    const { name, phone, plan_name, price, due_date, status, notes, app_name, server_name } = clientData;
-    let cleanPhone = phone.replace(/\D/g, '');
+    const { name, phone, plan_name, price, due_date, status, notes, app_name, server_name } = clientData || {};
+    const rawPhone = String(phone || '');
+    let cleanPhone = rawPhone.replace(/\D/g, '');
     if ((cleanPhone.length === 12 || cleanPhone.length === 13) && cleanPhone.startsWith('55')) {
       cleanPhone = cleanPhone.substring(2);
     }
+    const numPrice = isNaN(parseFloat(price)) ? 35.00 : parseFloat(price);
+    const validDueDate = due_date && due_date.trim() !== '' ? due_date : new Date().toISOString().split('T')[0];
+
     return new Promise((resolve, reject) => {
       db.run(
         `UPDATE clients SET name = ?, phone = ?, plan_name = ?, price = ?, due_date = ?, status = ?, notes = ?, app_name = ?, server_name = ? WHERE id = ?`,
-        [name, cleanPhone, plan_name, price, due_date, status || 'active', notes || '', app_name || '', server_name || '', id],
+        [name || 'Cliente Sem Nome', cleanPhone, plan_name || 'Plano Mensal', numPrice, validDueDate, status || 'active', notes || '', app_name || '', server_name || '', id],
         function (err) {
           if (err) return reject(err);
-          resolve({ id, ...clientData, phone: cleanPhone });
+          resolve({ id, ...clientData, phone: cleanPhone, price: numPrice });
         }
       );
     });
@@ -397,11 +407,21 @@ const dbHelper = {
   },
 
   addPlan: (planData) => {
-    const { name, price, description, color } = planData;
+    const { name, price, description, color, screens } = planData;
     return new Promise((resolve, reject) => {
-      db.run('INSERT INTO plans (name, price, description, color) VALUES (?, ?, ?, ?)', [name, price || 35.00, description || '', color || '#0284c7'], function(err) {
+      db.run('INSERT INTO plans (name, price, description, color, screens) VALUES (?, ?, ?, ?, ?)', [name, price || 35.00, description || '', color || '#0d55bc', screens || '1 Tela'], function(err) {
         if (err) return reject(err);
         resolve({ id: this.lastID, ...planData });
+      });
+    });
+  },
+
+  updatePlan: (id, planData) => {
+    const { name, price, description, color, screens } = planData;
+    return new Promise((resolve, reject) => {
+      db.run('UPDATE plans SET name = ?, price = ?, description = ?, color = ?, screens = ? WHERE id = ?', [name, price, description || '', color || '#0d55bc', screens || '1 Tela', id], function(err) {
+        if (err) return reject(err);
+        resolve({ id, ...planData });
       });
     });
   },

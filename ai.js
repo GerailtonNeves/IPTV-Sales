@@ -11,6 +11,31 @@ try {
 }
 
 /**
+ * Monta o texto promocional com todos os planos cadastrados no banco de dados com quantidade de telas
+ */
+async function buildPlansText(companyName, pixKey) {
+  let plansListText = '';
+  try {
+    const plans = await dbHelper.getAllPlans();
+    if (plans && plans.length > 0) {
+      plansListText = plans.map(p => {
+        const screensText = p.screens ? ` (${p.screens})` : '';
+        const descText = p.description ? `\n   _${p.description}_` : '';
+        return `📺 *${p.name}*${screensText}\n   💰 *Valor:* R$ ${parseFloat(p.price || 0).toFixed(2)}${descText}`;
+      }).join('\n\n');
+    }
+  } catch (err) {
+    console.error('Erro ao buscar planos em ai.js:', err);
+  }
+
+  if (!plansListText) {
+    plansListText = `📺 *Plano Mensal (1 Tela)*: R$ 35,00 por mês\n📺 *Plano Mensal (2 Telas)*: R$ 70,00 por mês`;
+  }
+
+  return `📺 *Planos & Preços - ${companyName}*\n\n${plansListText}\n\nTodos os planos incluem:\n✅ Canais Abertos e Fechados (HD/4K)\n✅ Filmes e Séries atualizados\n✅ Esportes e Conteúdo Infantil\n✅ Atualizações Frequentes & Alta Qualidade\n\n🔑 *Chave PIX para Assinatura/Renovação*: \`${pixKey}\`\n\n_Oferecemos um teste gratuito de 3 horas para você conhecer nosso sistema antes de contratar!_`;
+}
+
+/**
  * Processa a mensagem do cliente usando a API do Gemini ou o Motor de Regras Inteligente do Prompt
  */
 async function generateAiResponse({ userMessage, client, settings }) {
@@ -18,6 +43,15 @@ async function generateAiResponse({ userMessage, client, settings }) {
   const pixKey = settings.pix_key || 'Chave PIX não cadastrada';
   const systemPrompt = settings.system_prompt || '';
   const apiKey = settings.gemini_api_key || process.env.GEMINI_API_KEY;
+
+  // Buscar planos cadastrados com quantidade de telas e valores
+  let registeredPlansContext = '';
+  try {
+    const dbPlans = await dbHelper.getAllPlans();
+    if (dbPlans && dbPlans.length > 0) {
+      registeredPlansContext = dbPlans.map(p => `- ${p.name}: R$ ${parseFloat(p.price || 0).toFixed(2)} (${p.screens || '1 Tela'}) - ${p.description || ''}`).join('\n');
+    }
+  } catch (e) {}
 
   // Informações do cliente atual
   let clientContext = '';
@@ -47,6 +81,9 @@ Valor do Plano: R$ ${parseFloat(client.price || 0).toFixed(2)}
 Empresa: ${companyName}
 Chave PIX para pagamentos: ${pixKey}
 
+[PLANOS DE CANAIS CADASTRADOS COM QUANTIDADE DE TELAS]
+${registeredPlansContext}
+
 [INSTRUÇÕES DO SISTEMA E PROMPT DO ADMINISTRADOR]
 ${systemPrompt}
 
@@ -54,7 +91,7 @@ ${clientContext}
 
 REGRAS DE RESPOSTA OBRIGATÓRIAS:
 1. Sempre cumprimente o cliente pelo NOME ("Olá, [Nome]! 👋") quando o nome for conhecido.
-2. Se o cliente for novo ou seu nome/código não for identificado, cumprimente com simpatia e pergunte o Nome ou Código de Cliente para localizá-lo.
+2. Se o cliente perguntar de planos, informe os valores exatos e a quantidade de telas registradas acima.
 3. Responda de forma objetiva, simpática e profissional em Português (Brasil) utilizando os dados exatos informados acima.
 
 [MENSAGEM ENVIADA PELO CLIENTE]
@@ -96,7 +133,8 @@ REGRAS DE RESPOSTA OBRIGATÓRIAS:
   }
 
   if (msgLower.includes('plano') || msgLower.includes('preco') || msgLower.includes('preço') || msgLower.includes('valor') || msgLower.includes('tabela')) {
-    return `${clientGreeting} 📺 *Planos IPTV - ${companyName}*\n\n## Plano Premium\n📺 *1 Tela*: R$ 35,00 por mês\n📺 *2 Telas*: R$ 70,00 por mês\n\nTodos os planos incluem:\n✅ Canais Abertos e Fechados (HD/4K)\n✅ Filmes e Séries atualizados\n✅ Esportes e Conteúdo Infantil\n✅ Atualizações Frequentes & Alta Qualidade\n\n🔑 *Chave PIX para Assinatura/Renovação*: \`${pixKey}\`\n\n_Oferecemos um teste gratuito de 3 horas, para que você conheça nosso sistema antes de contratar._`;
+    const plansInfo = await buildPlansText(companyName, pixKey);
+    return `${clientGreeting}\n\n${plansInfo}`;
   }
 
   // Se houver Prompt do Sistema personalizado pelo admin, usar como base das respostas
@@ -108,4 +146,4 @@ REGRAS DE RESPOSTA OBRIGATÓRIAS:
   return `${clientGreeting} Seja muito bem-vindo(a) à *${companyName}*! 👋\n\nComo posso te ajudar hoje?\n\n📺 1️⃣ Conhecer nossos planos\n🎁 2️⃣ Solicitar um teste gratuito\n💳 3️⃣ Renovar meu plano\n📅 4️⃣ Consultar vencimento\n🛠️ 5️⃣ Suporte Técnico & Atendente`;
 }
 
-module.exports = { generateAiResponse };
+module.exports = { generateAiResponse, buildPlansText };

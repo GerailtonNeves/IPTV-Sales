@@ -42,29 +42,32 @@ try { fallbackDashboardHtml = require('./dashboard_html'); } catch (e) {}
 try { jsAppBundle = require('./js_app_bundle'); } catch (e) {}
 try { cssStyleBundle = require('./css_style_bundle'); } catch (e) {}
 
-// Servir os arquivos de script e CSS com MIME types corretos no Render
+// Servir os arquivos de script e CSS com MIME types e Charset UTF-8 explícitos
 app.get(['/js/app.js', '/public/js/app.js'], (req, res) => {
   const p1 = path.resolve(__dirname, 'public', 'js', 'app.js');
-  if (fs.existsSync(p1)) return res.type('application/javascript').sendFile(p1);
-  if (jsAppBundle) return res.type('application/javascript').send(jsAppBundle);
+  res.setHeader('Content-Type', 'application/javascript; charset=utf-8');
+  if (fs.existsSync(p1)) return res.sendFile(p1);
+  if (jsAppBundle) return res.send(jsAppBundle);
   res.status(404).send('// JS not found');
 });
 
 app.get(['/css/style.css', '/public/css/style.css'], (req, res) => {
   const p1 = path.resolve(__dirname, 'public', 'css', 'style.css');
-  if (fs.existsSync(p1)) return res.type('text/css').sendFile(p1);
-  if (cssStyleBundle) return res.type('text/css').send(cssStyleBundle);
+  res.setHeader('Content-Type', 'text/css; charset=utf-8');
+  if (fs.existsSync(p1)) return res.sendFile(p1);
+  if (cssStyleBundle) return res.send(cssStyleBundle);
   res.status(404).send('/* CSS not found */');
 });
 
-// Servir o painel web index.html na rota principal (Garante carregamento completo do HTML no Render)
+// Servir o painel web index.html com UTF-8 garantido para suporte total a emojis
 app.get(['/', '/index.html'], (req, res) => {
   const indexPath = path.resolve(__dirname, 'public', 'index.html');
+  res.setHeader('Content-Type', 'text/html; charset=utf-8');
   if (fs.existsSync(indexPath)) {
     return res.sendFile(indexPath);
   }
   if (fallbackDashboardHtml) {
-    return res.setHeader('Content-Type', 'text/html; charset=utf-8').send(fallbackDashboardHtml);
+    return res.send(fallbackDashboardHtml);
   }
   res.sendFile(path.resolve('public/index.html'));
 });
@@ -162,6 +165,15 @@ app.post('/api/plans', async (req, res) => {
   try {
     const plan = await dbHelper.addPlan(req.body);
     res.status(201).json(plan);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.put('/api/plans/:id', async (req, res) => {
+  try {
+    const plan = await dbHelper.updatePlan(req.params.id, req.body);
+    res.json(plan);
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
